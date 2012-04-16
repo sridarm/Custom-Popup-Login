@@ -1,0 +1,146 @@
+/**
+ * Adding Styles for custom Registration popup
+ */
+#reg_form_logo {
+    margin-top: 15px;
+    text-align: center;
+}
+#reg_form_logo img {
+    height: 98px;
+    width: 303px;
+}
+#instruction_box {
+    font-size: 12px;
+    padding: 5px 32px;
+}
+#instruction_box p {
+    color: black;
+    margin: 0;
+}
+#colorbox {
+    background-color:transparent;
+    opacity: 0.9;
+    position: fixed;
+}
+#colorbox #cboxWrapper {
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;    
+}
+#reg_form {
+    margin: 0 auto;
+    padding: 0 37px;
+    width: 300px;
+}
+#reg_form .message {
+    text-align: center;
+    color: red;
+}
+#user_have_account {
+    margin: 0 auto;
+    padding: 12px;
+    text-align: center;
+    width: 600px;
+}
+#user_have_account a {
+    color: blue;
+    font-size: 12px;
+    font-weight: normal;
+}
+#reg_form label {
+    margin: 0;
+}
+#reg_form input {
+    clear: both;
+    display: inline;
+    float: right;
+}
+#reg_form input#usr_submit {
+    background-image: url("../images/reg_popup_submit.png");
+    background-position: center center;
+    background-repeat: no-repeat;
+    border: grey solid 1px;
+    color: black;
+    cursor: pointer;
+    display: block;
+    float: none;
+    /* margin: 0 auto;*/
+    padding: 2px 11px;
+}
+#reg_form .user_actions.elements {
+    width: 300px;
+    margin: 20px 40% !important;
+}
+#reg_form .elements {
+    margin: 20px 0;
+}
+#content_box .login_message {
+    color: black;
+    font-family: arial;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 auto 15px;
+    text-align: center;
+    width: 435px;
+}
+#content_box #facebook_button {
+    height: 53px;
+    margin: 0 auto 10px;
+    width: 250px;
+}
+#content_box .login_box_link {
+    color: blue;
+    display: block;
+    font-size: 11px;
+    font-weight: normal;
+    margin: 0 auto;
+    width: 350px;
+    text-align: center;
+}
+#content_box #login_block {
+    margin: 0 auto;
+    width: 300px;
+}
+#content_box #login_block .elements {
+    margin: 16px 0;
+}
+#content_box #login_block .elements label{
+    display: inline-block;
+    margin: 0 25px 0 0;
+    text-align: right;
+    width: 70px;
+}
+#content_box #login_block .elements input{
+    
+}
+#content_box #login_block .user_actions.elements {
+    text-align: center;
+}
+#content_box #login_block input#usr_submit {
+  background-image: url("../images/reg_popup_submit.png");
+background-position: center center;
+background-repeat: no-repeat;
+border:  grey solid 1px;
+color: black;
+cursor: pointer;
+display: block;
+float: none;
+margin: 0 auto;
+padding: 2px 11px;
+}
+#content_box #user_dont_have_account {
+    font-family: arial;
+    font-size: 12px;
+    font-weight: normal;
+    margin: 0 auto;
+    width: 273px;   
+}
+#content_box #user_dont_have_account a {
+    color: blue;
+    font-weight: normal;
+}
+#content_box .loading_message {
+    text-align: center;
+    color: #852C87;
+    font-size: 12px;
+}

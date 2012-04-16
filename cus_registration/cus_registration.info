@@ -1,0 +1,7 @@
+name = Custom Login and Registration form occurs inside popup 
+description = "Custom Login and Registration form occurs inside popup. Which involves infusionsoft newsletter subscriptions. All in one popup"
+core = 6.x
+
+version = "6.x-1.0"
+core = "6.x"
+project = "Custom Login and Registration form occurs inside popup"

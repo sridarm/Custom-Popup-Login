@@ -1,0 +1,510 @@
+<?php
+// $Id: cus_registration.module,v 1.0 
+
+/**
+ * @file
+ * A user should be able to create a drupal account from the lightbox popup. The user must also login via this module
+ * Includes infusionsoft subscription in this module
+ * 
+ * cus_registration_init - This will load this module stylesheet and Popup loading of the registration form
+ * cus_register_page -  All the registration function will be performed here. This is connected to its template inside includes folder
+ * cus_registration_theme -  Assigning Template to function
+ * cus_registration_menu - Creating path for all functions
+ * 
+ */		
+
+function cus_registration_menu() { //  Function to create menus for pages @ using hook_menu
+  $items = array();
+  $items['cus/register'] = array(
+    'title' => 'Register',
+    'page callback' => 'cus_register_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['cus/register_process'] = array(
+    'title' => 'Registration form under process',
+    'page callback' => 'cus_registration_form_process',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['cus/subscribe_process'] = array(
+    'title' => 'Subscription Process',
+    'page callback' => 'cus_registration_subscribe_infusionsoft',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['cus/signin_withfacebook'] = array(
+ 	'title' => 'Signing in with Facebook',
+	'page callback' => 'cus_registration_signin_with_facebook',
+  	'access arguments' => array('access content'),
+  	'type' => MENU_CALLBACK, 
+  );
+  
+  $items['cus/normal_signin'] = array(
+ 	'title' => 'Sign in',
+	'page callback' => 'cus_registration_core_sign_in',
+  	'access arguments' => array('access content'),
+  	'type' => MENU_CALLBACK, 
+  );
+	
+  $items['cus/normal_login'] = array(
+ 	'title' => 'Login',
+	'page callback' => 'cus_registration_normal_login_authenticate_user',
+  	'access arguments' => array('access content'),
+  	'type' => MENU_CALLBACK, 
+  );
+  $items['cus/new_user_request_unamepass'] = array(
+ 	'title' => 'Login',
+	'page callback' => 'cus_registration_normal_login_user_request',
+  	'access arguments' => array('access content'),
+  	'type' => MENU_CALLBACK,
+  );  
+  
+  $items['cus/register_with_facebook'] = array(
+ 	'title' => 'Login',
+	'page callback' => 'cus_registration_with_facebook',
+  	'access arguments' => array('access content'),
+  	'type' => MENU_CALLBACK,
+  ); 
+  
+  return $items;
+}
+
+function cus_register_page() { // Function to invoke registration form
+	$data = new stdClass();
+	$output = theme('cus_register_page', $data); // Calling the theme file for displaying the data
+	print $output;
+}
+
+function cus_registration_core_sign_in() {
+	$data = new stdClass();
+	$output = theme('cus_registration_core_sign_in', $data); // Calling the theme file for displaying the data
+	print $output;
+}
+
+function cus_registration_theme() { // Function to apply template for all functions @using hook_theme
+  $path = drupal_get_path('module', 'cus_registration') .'/includes';
+  	return array(
+      'cus_register_page' => array(
+      'path' => $path,
+      'template' => 'cus_registration',
+      'arguments' => array('data' => NULL),
+	),
+	  'cus_registration_core_sign_in' => array(
+      'path' => $path,
+      'template' => 'cus_login',
+      'arguments' => array('data' => NULL),
+	)
+   );
+}
+
+function cus_registration_init() { // Function to initialize the action to be done when page loads.
+	global $base_url;
+	$user_register_page = $base_url."/user/register";
+	$user_page = $base_url."/user";
+	global $user;
+	if ((!$user->uid)) {
+		drupal_add_css(drupal_get_path('module', 'cus_registration') .'/css/style.css', 'theme', 'all', FALSE);
+		drupal_add_js('jQuery(document).ready(function() { $.fn.colorbox({href:"'.$base_url.'/cus/register", width:"690", height:"341", open:true}); });', 'inline');
+		drupal_add_js(drupal_get_path('module', 'cus_registration') .'/js/scripts.js');
+	} 
+}
+
+function cus_registration_form_process() { // Registering the user here
+	 
+	$emailid = $_REQUEST['email'];
+	$postcode = $_REQUEST['postcode'];
+	// $sql = db_result(db_query("SELECT field_venueid_value FROM {content_type_venue} WHERE field_postal_code_value = '%s'", $postcode));
+	$roles = array('roles' => array(8 => 'unverified'));
+	$get_existing_user = cus_registration_user_exists($emailid);
+	if (!$get_existing_user) {
+		/* if ($sql) { */
+			$namenew = preg_replace('/@.*$/', '',$email);
+			$namenew = preg_replace('/[^a-zA-Z0-9.-]/', '', $namenew);
+			if (db_result(db_query("SELECT count(*) FROM {users} WHERE uid <> %d AND LOWER(name) = LOWER('%s')", $account->uid, $namenew)) > 0) {
+				// find the next number available to append to the name
+				$sql = "SELECT SUBSTRING_INDEX(name,'_',-1) FROM {users} WHERE name REGEXP '%s' ORDER BY CAST(SUBSTRING_INDEX(name,'_',-1) AS UNSIGNED) DESC LIMIT 1";
+				$nameidx = db_result(db_query($sql, '^'. $namenew .'_[0-9]+$'));
+				$namenew .= '_'. ($nameidx + 1);
+			}		
+        	$username = $namenew;
+			/*$usr_name = cus_registration_generate_username($emailid);
+			$form_state = array();
+			$form_state['values']['name'] = $usr_name;
+			$form_state['values']['mail'] = $emailid;
+			$form_state['values']['Postcode'] = $postcode;
+			$form_state['values']['status'] = $status;
+			$form_state['values']['roles'] = $roles;
+			$form_state['values']['op'] = t('Create new account');
+			drupal_execute('user_register', $form_state); */
+			$array = array();
+			$status = 1;
+	        $array["name"] = $username;
+	        $array["mail"] = $emailid;
+	        $array["status"] = $status;
+	        $array["roles"] = $roles;
+	        $userObj = user_save("", $array); // this function is documented in the API
+			//drupal_execute('user_register', $form_state);
+			drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+			//echo drupal_to_js($form_state['user']);
+			echo drupal_to_js($userObj);
+			//print $userObj;
+			exit;
+	/*	} else {
+			$error_state = array();
+			$error_state['message']['type'] = "Invalid Postal code";
+			drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+			echo drupal_to_js($error_state['message']);
+		} */
+	} else {
+		$error_state = array();
+		$error_state['message']['type'] = "Email Id already Exists";
+		drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+		echo drupal_to_js($error_state['message']);
+	}
+}
+
+function cus_registration_user_exists($email) { //Check whether the user already exists in the database
+	$get_existing_mail = db_result(db_query("SELECT COUNT(*) FROM {users} WHERE mail = '%s';", $email));
+	if ($get_existing_mail) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function cus_registration_generate_username($email) { // Generating an unique username using the email provided 
+	$namenew = preg_replace('/@.*$/', '',$email);
+	$namenew = preg_replace('/[^a-zA-Z0-9.-]/', '', $namenew);
+	if (db_result(db_query("SELECT count(*) FROM {users} WHERE uid <> %d AND LOWER(name) = LOWER('%s')", $account->uid, $namenew)) > 0) {
+		// find the next number available to append to the name
+		$sql = "SELECT SUBSTRING_INDEX(name,'_',-1) FROM {users} WHERE name REGEXP '%s' ORDER BY CAST(SUBSTRING_INDEX(name,'_',-1) AS UNSIGNED) DESC LIMIT 1";
+		$nameidx = db_result(db_query($sql, '^'. $namenew .'_[0-9]+$'));
+		$namenew .= '_'. ($nameidx + 1);
+		return $namenew;
+	}
+}
+
+function cus_registration_assign_user_role($userid) // This assigns the user to "unverified" role.
+{
+	$usr = user_load($userid);
+	$details = array(
+		'uid' => $userid,
+		'roles' => array(
+			8 => 'unverified' // 8 is the role ID
+			)
+		);
+	user_save($usr, $details);
+}
+
+function cus_registration_subscribe_infusionsoft() { // Getting the Venue id using the Post code provided and  assigning role to unverified
+	// $postcode = $_REQUEST['post_code']; //I have commented a new process will be followed for the postal code
+	$postcode = 'bs1 1ng';
+	$userid = $_REQUEST['user_id'];
+	$message = "";
+	$sql = db_result(db_query("SELECT field_venueid_value FROM {content_type_venue} WHERE field_postal_code_value = '%s'", $postcode));
+	if ($sql) {
+		cus_registration_assign_user_role($userid);
+		$data = $sql;
+	} else {
+		$data = "Please enter proper Postal code";
+		$message = "false";
+	}
+	$sql_data = array();
+	$sql_data['data']['sql'] = $data;
+	$sql_data['data']['message'] = $message;
+	$sql_data['data']['user_id'] = $userid;
+	$sql_data['data']['user_role'] = "unverified";
+	drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+	echo drupal_to_js($sql_data['data']);
+}
+
+function cus_registration_signin_with_facebook() {
+	global $user;
+	$userid = $_REQUEST['usr_id'];
+	$user_role = $_REQUEST['usr_role'];
+	if ($userid && $user_role == "unverified") {
+		login_box($userid);
+	} else {
+		login_box();
+	}
+}
+
+function login_box($userid) {
+	$path = drupal_get_path('module', 'cus_registration') .'/images';
+	if ($userid) {
+		$get_our_user = user_load($userid);
+		//print '<a href="#" onclick="myfunc();"><img src="'.$path.'/bg_facebook_sign_in_btn.png"></a>';
+		print "<div class='login_message'>You're now a member of Jongleurs! <br/> Please click to login with your Facebook account.</div>";
+		//print "<div id='facebook_button'>".fbconnect_render_button()."</div>"; 
+		print "<div id='facebook_button'><a href='javascript:myfunc(".$get_our_user->uid.")'><img src='".$path."/bg_facebook_sign_in_btn.png'></a></div>";
+		print "<a class='login_box_link' href='javascript:normal_user_login_registered(".$get_our_user->uid.")'>I don't have Facebook account. Please send me my username and password!</a>";
+	} else {
+		print "<div class='login_message'>You're now a member of Jongleurs! <br/> Please click to login with your Facebook account.</div>";
+		// print "<div id='facebook_button'>".fbconnect_render_button()."</div>"; 
+		print "<div id='facebook_button'><a href='javascript:myfunc()'><img src='".$path."/bg_facebook_sign_in_btn.png'></a></div>";
+		print "<a class='login_box_link' href='javascript:normal_user_login()'>Don't have Facebook account? Use site login here</a>";
+	}
+}
+
+function cus_registration_normal_login_authenticate_user() {
+	$username = $_REQUEST['uname'];
+	$password = $_REQUEST['pass'];
+	$form_values = array();
+	$form_values["name"] = $username;
+	$form_values["pass"] = $password;
+	$form_values["op"] = "Log in";
+	if (authenticate_user($username, $password)){
+		$account = user_load(array('name' => check_plain($username)));
+		if (in_array('unverified', array_values($account->roles))) {
+			$details = array('uid' => $account->uid, 'roles' => array(9 => 'verified')); // 9 is the role ID
+			user_save($account, $details);
+		}
+		user_authenticate($form_values);
+		print "true";		
+	} else {
+		print "false";
+	}
+}
+
+function authenticate_user($username, $password, $hashed = false){
+	$user_obj = user_load(array('name' => $username, 'pass' => trim($password), 'status' => 1));
+	return $user_obj;
+}
+
+/**
+ * Implementation of hook_mail().
+ *
+ * @param $key An identifier of the mail.
+ * @param $message An array to be filled in. Keys in this array include: id, to, subject, body, from, headers
+ * @param $params An arbitrary array of parameters set by the caller to drupal_mail.
+ */
+function cus_registration_mail($key, &$message, $params) {
+	switch ($key) {
+		case 'registration_confirmation_mail':
+			$site_email = variable_get('site_mail', '');
+			global $base_url;
+			$message['headers']= array_merge(
+				$message['headers'], 
+				array(
+					'From' => 'Jongleurs<'.$site_email.'>',
+					'MIME-Version' => '1.0',
+					'Content-Type' => 'text/html; charset=UTF-8; format=flowed',
+					'Content-Transfer-Encoding' => '8Bit',
+					'X-Mailer' => 'Drupal'
+				)
+			);
+			$message['to'] = $params['usr_email'];
+			$message['subject'] = t('Account details for @username at @sitename Website ',array('@username' => $params['username'],'@sitename' => variable_get('site_name', 'Drupal')));
+			$message['body'][] = t('Dear @username, <br/><br/>',array('@username'=> $params['username']));
+			$message['body'][] = t('username: @username <br/>',array('@username'=> $params['username']));
+			$message['body'][] = t('password: @password <br/><br/>',array('@password'=> $params['password']));
+			$message['body'][] = t('You can also login to the site by following this link @login_url/user<br/><br/>',array('@login_url' => $base_url));
+			$message['body'][] = t('Thank you for registering on the @sitename website. You may now login to the website using the above username and password. <br/><br/> Thanks <br/><br/> @sitename Team',array('@sitename' => variable_get('site_name', 'Drupal')));
+		break;
+	}
+}
+
+function cus_registration_normal_login_user_request() {
+	$user_id = $_REQUEST['user_id'];
+	$getuser = user_load($user_id);
+	$params['usr_email'] = $getuser->mail;
+	$params['username'] = $getuser->name;
+	$update['pass'] =  cus_registration_user_password_generate();
+	$params['password'] = $update['pass'];
+	user_save($getuser, $update);
+	drupal_mail('cus_registration', 'registration_confirmation_mail', $to, $language, $params, $from = NULL, $send = TRUE);
+}
+
+function cus_registration_with_facebook() {
+	$reg_userid = $_REQUEST['reg_uid'];
+	$fac_emailid = $_REQUEST['facebook_email'];
+	$getuser_id = user_load($reg_userid);
+	$getuser_email = $getuser_id->mail;
+	if ((isset($getuser_email) && ($getuser_email == $fac_emailid))) {
+		if (cus_registration_process_with_facebook($getuser_email, $fac_emailid, $same_email=true)) {
+				cus_registration_assign_verified_role_to_user($getuser_email);
+				print "Registered User";
+		}
+	} else if ((isset($getuser_email) && ($getuser_email !== $fac_emailid))) {
+		if (cus_registration_process_with_facebook($getuser_email, $fac_emailid, $same_email=true)) {
+			cus_registration_assign_verified_role_to_user($getuser_email);
+			print "Registered User";
+		}
+		// } else {
+			// print "Facebook account already Exist";
+		// }
+	} else {
+		if(cus_registration_user_exists($fac_emailid)) {
+			if (cus_registration_check_user_is_fb_user($fac_emailid)) {
+				cus_registration_assign_verified_role_to_user($fac_emailid);
+				print "Registered User";
+			} else {
+				if (cus_registration_set_existing_user_fb_user($fac_emailid)) {
+					cus_registration_assign_verified_role_to_user($fac_emailid);
+					print "Registered User";
+				} else {
+					print "Unregistered User";
+				}
+			}
+		} else {
+			print "Unregistered User";
+		}
+	}
+}
+
+function cus_registration_check_user_is_fb_user($fac_emailid) {
+	$account = user_load(array('mail' => check_plain($fac_emailid)));
+	$user_uid = $account->uid;
+	$sql = db_result(db_query("SELECT uid FROM {fbconnect_users} WHERE uid = '%s'", $user_uid));
+	if ($sql)
+	{
+		return true;
+	} else {
+		return false;
+	}
+}
+
+// Connecting the existing user with facebook if they like to connect with facebook account. This performs only if existing reg user email and facebook account email are same
+function cus_registration_set_existing_user_fb_user($fac_emailid) { 
+	$account = user_load(array('mail' => check_plain($fac_emailid)));
+	$user_uid = $account->uid;
+	$fbdata = fbconnect_get_user_info('name, email, link, birthday, last_name, first_name');
+	$form_state['values']['fb_visible'] = 1;
+	$form_state['values']['fb_avatar']  = 1;
+	$form_state['mail']  = $fac_emailid;
+	user_save($account, $form_state);
+    profile_load_profile($account); // Loading the profile of the user
+    $edit['profile_surname'] = $fbdata['first_name'];
+	$edit['profile_old_pwd'] = $fbdata['last_name'];
+	if ($pieces = explode("/", $fbdata['birthday'])) {  // Exploding Birthday to separate data and loading into each field
+      	$custdob['year']=($pieces[2]-0);
+      	$custdob['month']=($pieces[0]-0);
+      	$custdob['day']=($pieces[1]-0);
+	} 
+	$edit['profile_ext_birthday'] = $custdob;
+	cus_registration_save_profile(&$edit, &$account, "Personal"); // Updates the user profile from facebook data
+   	$fbuid = fbconnect_get_user_info('id');
+   	fbconnect_register($account->uid, $fbuid['id']);	   	
+   	return true;
+}
+
+// Connecting the existing user with facebook if they like to connect with facebook account. 
+//This performs only if existing reg user email and facebook account email are not same
+function cus_registration_new_account_existing_user_diff_fb($fac_emailid) {
+	$emailid = $fac_emailid;
+	$roles = array('roles' => array(8 => 'unverified'));
+	$namenew = preg_replace('/@.*$/', '',$email);
+	$namenew = preg_replace('/[^a-zA-Z0-9.-]/', '', $namenew);
+	if (db_result(db_query("SELECT count(*) FROM {users} WHERE uid <> %d AND LOWER(name) = LOWER('%s')", $account->uid, $namenew)) > 0) {
+		// find the next number available to append to the name
+		$sql = "SELECT SUBSTRING_INDEX(name,'_',-1) FROM {users} WHERE name REGEXP '%s' ORDER BY CAST(SUBSTRING_INDEX(name,'_',-1) AS UNSIGNED) DESC LIMIT 1";
+		$nameidx = db_result(db_query($sql, '^'. $namenew .'_[0-9]+$'));
+		$namenew .= '_'. ($nameidx + 1);
+	}		
+	$username = $namenew;
+	$array = array();
+	$status = 1;
+	$array["name"] = $username;
+    $array["mail"] = $emailid;
+    $generated_pass = cus_registration_user_password_generate(); 
+    $array["pass"] = $generated_pass; 
+    $array["status"] = $status;
+    $array["roles"] = $roles;
+    $userObj = user_save("", $array); // this function is documented in the API
+    if (cus_registration_set_existing_user_fb_user($userObj->email)) {
+	    $params['usr_email'] = $userObj->mail;
+		$params['username'] = $userObj->name;
+		$params['password'] = $generated_pass;
+    	drupal_mail('cus_registration', 'registration_confirmation_mail', $to, $language, $params, $from = NULL, $send = TRUE);
+    	return true;
+    }
+}
+
+function cus_registration_assign_verified_role_to_user($user_reg_email) {
+	$account = user_load(array('mail' => check_plain($user_reg_email))); // Assigning Verified roles to user registered via Facebook
+	if (in_array('unverified', array_values($account->roles))) {
+		$details = array('uid' => $account->uid, 'roles' => array(9 => 'verified')); // 9 is the role ID
+		user_save($account, $details);
+	}
+}
+
+function cus_registration_process_with_facebook($user_reg_email, $user_face_email, $same_email=true) {
+		$user_obj = user_load(array('mail' => $user_reg_email));
+		$fbdata = fbconnect_get_user_info('name, email, link, birthday, last_name, first_name');
+	    $form_state['values']['fb_visible'] = 1;
+	    $form_state['values']['fb_avatar']  = 1;
+	    if (!$same_email) {
+	    	if (cus_registration_user_exists($user_face_email)) {
+	    		user_delete(array(), $user_obj->uid);
+	    		return false;
+	    	}
+	    	$form_state['mail']  = $user_face_email;
+	    }
+	    user_save($user_obj, $form_state);
+	    profile_load_profile($user_obj); // Loading the profile of the user
+	    $edit['profile_surname'] = $fbdata['first_name'];
+		$edit['profile_old_pwd'] = $fbdata['last_name'];
+		if ( $pieces = explode("/", $fbdata['birthday'])) {  // Exploding Birthday to separate data and loading into each field
+	      	$custdob['year']=($pieces[2]-0);
+	      	$custdob['month']=($pieces[0]-0);
+	      	$custdob['day']=($pieces[1]-0);
+		} 
+		$edit['profile_ext_birthday'] = $custdob;
+		cus_registration_save_profile(&$edit, &$user_obj, "Personal"); // Updates the user profile from facebook data
+	   	$fbuid = fbconnect_get_user_info('id');
+	   	fbconnect_register($user_obj->uid, $fbuid['id']);	   	
+	   	return true;	
+}
+
+function cus_registration_save_profile(&$edit, &$user, $category, $register = FALSE){ // Updating user profile values from facebook
+  $result = _profile_get_fields($category, $register);
+  while ($field = db_fetch_object($result)) {
+    if(isset($edit[$field->name])){
+      if (_profile_field_serialize($field->type)) {
+        $edit[$field->name] = serialize($edit[$field->name]);
+      }
+      db_query("UPDATE {profile_values} SET value = '%s' WHERE fid = %d AND uid = %d", $edit[$field->name], $field->fid, $user->uid);
+    }
+    $edit[$field->name] = NULL;
+  }
+}
+
+function cus_registration_user_password_generate() {
+	
+  $allowable_characters = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+  $allowable_numbers = '23456789';
+  
+  $char_len = strlen($allowable_characters) - 1;
+  $num_len = strlen($allowable_numbers) - 1;
+  
+  $pass = '';
+  
+  for ($i = 0; $i < 2; $i++) {
+    $pass .= $allowable_characters[mt_rand(0, $char_len)];
+  }
+  
+  for ($j = 0; $j < 4; $j++) {
+    $pass .= $allowable_numbers[mt_rand(0, $num_len)];
+  }
+  
+  return $pass;
+  
+}
+
+function cus_registration_mail_alter(&$message) {
+	switch ($message['id']) {
+		case "user_register_admin_created":
+		case "user_register_no_approval_required":
+		case "user_register_pending_approval":
+		case "user_status_blocked":
+		case "user_status_deleted":
+	break;
+		case "user_register_no_approval_required":
+		$message['to'] = "";
+	break;
+	}
+}
