@@ -2,6 +2,7 @@
 /**
  *@base_url - Which gives the base url of the site 
  *@module_path - Provides the module path
+ *Please feel free to add your comments
 */
 
 global $base_url; 
